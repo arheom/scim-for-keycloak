@@ -1,6 +1,8 @@
-|  Branch | Circle CI Status |
-| :------ | :--------------- |
-| master  | [![CircleCI](https://circleci.com/gh/Captain-P-Goldfish/scim-for-keycloak/tree/master.svg?style=shield)](https://circleci.com/gh/Captain-P-Goldfish/scim-for-keycloak/tree/master)
+| Branch | Circle CI Status                                                                             |
+|:-------|:---------------------------------------------------------------------------------------------|
+| master | build deactivated due to build problem on circle-ci. But the current version is still stable |
+
+[//]: # ( master   [![CircleCI]&#40;https://circleci.com/gh/Captain-P-Goldfish/scim-for-keycloak/tree/master.svg?style=shield&#41;]&#40;https://circleci.com/gh/Captain-P-Goldfish/scim-for-keycloak/tree/master&#41;)
 
 ## Donations
 
@@ -28,23 +30,30 @@ Thanks to *Raffael Grob* for providing this manual.
 
 ## Keycloak support matrix
 
-|  version | supported          | scim-for-keycloak version  | SCIM-SDK Version |
-| :------- | :----------------- | :------------------------- | ---------------- |
-| lower    | :x:                | -                          |                  |
-| 9.0.x    | :x:                | You may find an older working version at https://github.com/Captain-P-Goldfish/SCIM-SDK |   | 
-| 10.0.x   | :x:                | You may find an older working version at https://github.com/Captain-P-Goldfish/SCIM-SDK |   |  
-| 11.0.x   | :heavy_check_mark: | kc-11-b1                   | 1.8.3            |
-| 12.0.x   | :heavy_check_mark: | kc-12-b1                   | 1.8.3            |
-| 12.0.x   | :heavy_check_mark: | kc-12-b2                   | 1.9.2            |
-| 13.0.0   | :heavy_check_mark: | kc-13-b1                   | 1.9.2            |
-| 13.0.1   | :heavy_check_mark: | kc-13-b2                   | 1.11.0           |
-| 13.0.1   | :heavy_check_mark: | kc-13-b3                   | 1.11.0           |
-| 13.0.1   | :heavy_check_mark: | kc-13-b4                   | 1.11.0           |
-| 14.0.0   | :heavy_check_mark: | kc-14-b1                   | 1.11.0           |
-| 14.0.0   | :heavy_check_mark: | kc-14-b2                   | 1.11.0           |
-| 14.0.x   | :heavy_check_mark: | kc-14-b3                   | 1.11.0           |
-| 15.0.x   | :heavy_check_mark: | kc-15-b1                   | 1.12.0           |
-| 15.0.x   | :heavy_check_mark: | kc-15-b2                   | 1.12.1           |
+| version | supported          | scim-for-keycloak version                                                               | SCIM-SDK Version |
+|:--------|:-------------------|:----------------------------------------------------------------------------------------|------------------|
+| lower   | :x:                | -                                                                                       |                  |
+| 9.0.x   | :x:                | You may find an older working version at https://github.com/Captain-P-Goldfish/SCIM-SDK |                  | 
+| 10.0.x  | :x:                | You may find an older working version at https://github.com/Captain-P-Goldfish/SCIM-SDK |                  |  
+| 11.0.x  | :heavy_check_mark: | kc-11-b1                                                                                | 1.8.3            |
+| 12.0.x  | :heavy_check_mark: | kc-12-b1                                                                                | 1.8.3            |
+| 12.0.x  | :heavy_check_mark: | kc-12-b2                                                                                | 1.9.2            |
+| 13.0.0  | :heavy_check_mark: | kc-13-b1                                                                                | 1.9.2            |
+| 13.0.1  | :heavy_check_mark: | kc-13-b2                                                                                | 1.11.0           |
+| 13.0.1  | :heavy_check_mark: | kc-13-b3                                                                                | 1.11.0           |
+| 13.0.1  | :heavy_check_mark: | kc-13-b4                                                                                | 1.11.0           |
+| 14.0.0  | :heavy_check_mark: | kc-14-b1                                                                                | 1.11.0           |
+| 14.0.0  | :heavy_check_mark: | kc-14-b2                                                                                | 1.11.0           |
+| 14.0.x  | :heavy_check_mark: | kc-14-b3                                                                                | 1.11.0           |
+| 15.0.x  | :heavy_check_mark: | kc-15-b1                                                                                | 1.12.0           |
+| 15.0.x  | :heavy_check_mark: | kc-15-b2                                                                                | 1.12.1           |
+| 15.0.x  | :heavy_check_mark: | kc-15-b3                                                                                | 1.12.1           |
+| 16.0.x  | :x:                | kc-16-b1 (BROKEN -(due to missing theme files)                                          | 1.12.3           |
+| 16.0.x  | :heavy_check_mark: | kc-16-b2                                                                                | 1.12.3           |
+| 16.1.x  | :x:                | kc-16-b3 (BROKEN - due to liquibase problem)                                            | 1.12.4           |
+| 16.1.x  | :heavy_check_mark: | kc-16-b4                                                                                | 1.12.4           |
+| 17.0.x  | :x:                | :x:                                                                                     | :x:              |
+| 18.0.x  | :heavy_check_mark: | kc-18-b1                                                                                | 1.13.4           |
 
 ## Versioning
 
@@ -54,8 +63,8 @@ This project will use the following versioning pattern
 
 ## Releases
 
-Releases will be only tagged in git and not be uploaded to any repository. Please build the necessary artifacts with the
-following description yourself.
+Starting with version kc-16-b1 I will upload the built artifacts to github into the release section. Any previous
+versions must still be build manually as described below.
 
 ## Release Notes
 
@@ -76,12 +85,12 @@ Checkout the git tag that you want to build:
    * `cd ${SCIM_FOR_KEYCLOAK_HOME}`
    * `mvn clean package -DskipTests`
 4. find the scim-for-keycloak artifact in:
-   `scim-for-keycloak/scim-for-keycloak-deployment/target/scim-for-keycloak-kc-${keycloak.version}-b${project.incremental.version}.ear`
+   `scim-for-keycloak/scim-for-keycloak-server/target/scim-for-keycloak-kc-${keycloak.version}-b${project.incremental.version}.ear`
 
-## Deploy into a standalone keycloak server
+## Deploy into keycloak server
 
-Copy the built artifact into the directory `${keycloak.home}/standalone/deployments` of a keycloak server.  
-**NOTE:** *If the server is running during deployment you need to restart it!*
+Add the artifact to the keycloak providers directory `${keycloak.home}/providers` and execute in
+`${keycloak.home}/bin` the command `kc.sh build` to install the provider
 
 ## Security Considerations
 

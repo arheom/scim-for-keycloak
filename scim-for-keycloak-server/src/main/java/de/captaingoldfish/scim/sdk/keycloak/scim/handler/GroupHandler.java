@@ -1,14 +1,15 @@
 package de.captaingoldfish.scim.sdk.keycloak.scim.handler;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.StringUtils;
 import org.keycloak.events.admin.OperationType;
 import org.keycloak.events.admin.ResourceType;
 import org.keycloak.models.GroupModel;
@@ -57,6 +58,11 @@ public class GroupHandler extends ResourceHandler<Group>
       throw new ConflictException("a group with name '" + groupName + "' does already exist");
     }
     GroupModel groupModel = keycloakSession.getContext().getRealm().createGroup(groupName);
+
+    Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+    groupModel.setAttribute(AttributeNames.RFC7643.CREATED, Collections.singletonList(now.toString()));
+    groupModel.setAttribute(AttributeNames.RFC7643.LAST_MODIFIED, Collections.singletonList(now.toString()));
+
     groupModel = groupToModel((ScimKeycloakContext)context, group, groupModel);
     Group newGroup = modelToGroup(keycloakSession, groupModel);
     {
@@ -127,6 +133,10 @@ public class GroupHandler extends ResourceHandler<Group>
     {
       return null; // causes a resource not found exception you may also throw it manually
     }
+
+    groupModel.setAttribute(AttributeNames.RFC7643.LAST_MODIFIED,
+                            Collections.singletonList(Instant.now().truncatedTo(ChronoUnit.MILLIS).toString()));
+
     groupModel = groupToModel((ScimKeycloakContext)context, groupToUpdate, groupModel);
     Group group = modelToGroup(keycloakSession, groupModel);
     {
@@ -188,7 +198,7 @@ public class GroupHandler extends ResourceHandler<Group>
 
   /**
    * remove groups that are no longer associated with the current group and adds the newly associated groups
-   * 
+   *
    * @param group the scim group model as it must be after the change
    * @param groupModel the current group model
    */
@@ -261,7 +271,7 @@ public class GroupHandler extends ResourceHandler<Group>
 
   /**
    * remove users that are no longer associated with the current group and adds the newly associated users
-   * 
+   *
    * @param group the scim group model as it must be after the change
    * @param groupModel the current group model
    */
@@ -293,7 +303,10 @@ public class GroupHandler extends ResourceHandler<Group>
       return doNotRemoveFromGroup;
     });
     usersToLeaveGroup.forEach(userModel -> {
-      userModel.leaveGroup(groupModel);
+      // this line makes sure that we are getting the cache-representation of the user so that both database and
+      // cache will be updated
+      UserModel oldMember = keycloakSession.users().getUserById(realmModel, userModel.getId());
+      oldMember.leaveGroup(groupModel);
       adminEventAuditer.createEvent(OperationType.DELETE,
                                     ResourceType.GROUP_MEMBERSHIP,
                                     String.format("users/%s/groups/%s", userModel.getId(), groupModel.getId()),
@@ -344,12 +357,20 @@ public class GroupHandler extends ResourceHandler<Group>
    */
   private Group modelToGroup(KeycloakSession keycloakSession, GroupModel groupModel)
   {
+
+    Instant created = Optional.ofNullable(groupModel.getFirstAttribute(AttributeNames.RFC7643.CREATED))
+                              .map(Instant::parse)
+                              .orElse(Instant.now());
+    Instant lastModified = Optional.ofNullable(groupModel.getFirstAttribute(AttributeNames.RFC7643.LAST_MODIFIED))
+                                   .map(Instant::parse)
+                                   .orElse(created);
+
     return Group.builder()
                 .id(groupModel.getId())
                 .externalId(groupModel.getFirstAttribute(AttributeNames.RFC7643.EXTERNAL_ID))
                 .displayName(groupModel.getName())
                 .members(getMembers(keycloakSession, groupModel))
-                .meta(Meta.builder().created(getCreated(groupModel)).lastModified(getLastModified(groupModel)).build())
+                .meta(Meta.builder().created(created).lastModified(lastModified).build())
                 .build();
   }
 
@@ -379,43 +400,5 @@ public class GroupHandler extends ResourceHandler<Group>
               .forEach(members::add);
 
     return members;
-  }
-
-  /**
-   * gets the created value of the group
-   *
-   * @param groupModel the group model from which the created value should be extracted
-   * @return the created value of the given group
-   */
-  private Instant getCreated(GroupModel groupModel)
-  {
-    String createdString = groupModel.getFirstAttribute(AttributeNames.RFC7643.CREATED);
-    if (StringUtils.isNotBlank(createdString))
-    {
-      return Instant.ofEpochMilli(Long.parseLong(createdString));
-    }
-    else
-    {
-      return Instant.now();
-    }
-  }
-
-  /**
-   * gets the lastModified value of the group
-   *
-   * @param groupModel the group model from which the last modified value should be extracted
-   * @return the last modified value of the given group
-   */
-  private Instant getLastModified(GroupModel groupModel)
-  {
-    String lastModifiedString = groupModel.getFirstAttribute(AttributeNames.RFC7643.LAST_MODIFIED);
-    if (StringUtils.isNotBlank(lastModifiedString))
-    {
-      return Instant.ofEpochMilli(Integer.parseInt(lastModifiedString));
-    }
-    else
-    {
-      return getCreated(groupModel);
-    }
   }
 }
