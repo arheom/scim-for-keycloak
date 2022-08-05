@@ -2,17 +2,16 @@ package de.captaingoldfish.scim.sdk.keycloak.scim;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MultivaluedHashMap;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import org.jboss.resteasy.specimpl.ResteasyHttpHeaders;
-import org.jboss.resteasy.spi.HttpRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,7 +36,7 @@ import de.captaingoldfish.scim.sdk.keycloak.entities.ScimResourceTypeEntity;
 import de.captaingoldfish.scim.sdk.keycloak.entities.ScimServiceProviderEntity;
 import de.captaingoldfish.scim.sdk.keycloak.scim.administration.ServiceProviderResource;
 import de.captaingoldfish.scim.sdk.keycloak.services.ScimResourceTypeService;
-import de.captaingoldfish.scim.sdk.keycloak.setup.RequestMock;
+import de.captaingoldfish.scim.sdk.keycloak.setup.RequestBuilder;
 import de.captaingoldfish.scim.sdk.server.schemas.ResourceType;
 import de.captaingoldfish.scim.sdk.server.schemas.custom.EndpointControlFeature;
 import de.captaingoldfish.scim.sdk.server.schemas.custom.ResourceTypeAuthorization;
@@ -72,9 +71,9 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
   public void testScimEndpointTest()
   {
     ScimEndpoint scimEndpoint = getScimEndpoint();
-    RequestMock.mockRequest(scimEndpoint, getKeycloakSession()).endpoint(EndpointPaths.USERS);
+    HttpServletRequest request = RequestBuilder.builder(scimEndpoint).endpoint(EndpointPaths.USERS).build();
 
-    Response response = scimEndpoint.handleScimRequest(null);
+    Response response = scimEndpoint.handleScimRequest(request);
 
     Assertions.assertEquals(HttpStatus.OK, response.getStatus());
   }
@@ -92,11 +91,11 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
     serviceProviderResource.updateServiceProviderConfig(serviceProvider.toString());
 
     ScimEndpoint scimEndpoint = getScimEndpoint();
-    RequestMock.mockRequest(scimEndpoint, getKeycloakSession()).endpoint(EndpointPaths.USERS);
+    HttpServletRequest request = RequestBuilder.builder(scimEndpoint).endpoint(EndpointPaths.USERS).build();
 
     try
     {
-      scimEndpoint.handleScimRequest(null);
+      scimEndpoint.handleScimRequest(request);
       Assertions.fail("this point must not be reached");
     }
     catch (NotFoundException ex)
@@ -114,9 +113,8 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
 
     // try to load the users from the default realm. A single user should be returned
     {
-
-      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession()).endpoint(EndpointPaths.USERS);
-      Response response = getScimEndpoint().handleScimRequest(null);
+      HttpServletRequest request = RequestBuilder.builder(getScimEndpoint()).endpoint(EndpointPaths.USERS).build();
+      Response response = getScimEndpoint().handleScimRequest(request);
       Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
       String responseString = (String)response.getEntity();
@@ -133,8 +131,8 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
 
     // now try to load the users from the other realm. An empty list should be returned
     {
-      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession()).endpoint(EndpointPaths.USERS);
-      Response response = getScimEndpoint().handleScimRequest(null);
+      HttpServletRequest request = RequestBuilder.builder(getScimEndpoint()).endpoint(EndpointPaths.USERS).build();
+      Response response = getScimEndpoint().handleScimRequest(request);
       Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
       String responseString = (String)response.getEntity();
@@ -152,8 +150,8 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
 
     // try to load the users from the default realm. A single user should be returned
     {
-      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession()).endpoint(EndpointPaths.USERS);
-      Response response = getScimEndpoint().handleScimRequest(null);
+      HttpServletRequest request = RequestBuilder.builder(getScimEndpoint()).endpoint(EndpointPaths.USERS).build();
+      Response response = getScimEndpoint().handleScimRequest(request);
       Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
       String responseString = (String)response.getEntity();
@@ -170,8 +168,8 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
     // now try to load the users from the other realm. It should fail because SCIM is not enabled
     try
     {
-      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession()).endpoint(EndpointPaths.USERS);
-      getScimEndpoint().handleScimRequest(null);
+      HttpServletRequest request = RequestBuilder.builder(getScimEndpoint()).endpoint(EndpointPaths.USERS).build();
+      getScimEndpoint().handleScimRequest(request);
       Assertions.fail("this point must not be reached");
     }
     catch (NotFoundException ex)
@@ -213,10 +211,10 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
 
     // try to load the users from the default realm. An exception should be thrown
     {
-      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession()).endpoint(EndpointPaths.USERS);
+      HttpServletRequest request = RequestBuilder.builder(getScimEndpoint()).endpoint(EndpointPaths.USERS).build();
       try
       {
-        getScimEndpoint().handleScimRequest(null);
+        getScimEndpoint().handleScimRequest(request);
         Assertions.fail("this point must not be reached");
       }
       catch (NotFoundException ex)
@@ -232,8 +230,8 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
 
     // now try to load the users from the new realm. An empty list should be returned
     {
-      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession()).endpoint(EndpointPaths.USERS);
-      Response response = getScimEndpoint().handleScimRequest(null);
+      HttpServletRequest request = RequestBuilder.builder(getScimEndpoint()).endpoint(EndpointPaths.USERS).build();
+      Response response = getScimEndpoint().handleScimRequest(request);
       Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
       String responseString = (String)response.getEntity();
@@ -380,15 +378,17 @@ public class ScimEndpointTest extends AbstractScimEndpointTest
   @Test
   public void testCreateGroupWithApplicationJsonContentType()
   {
-    MultivaluedMap<String, String> headers = new MultivaluedHashMap<>();
-    headers.putSingle(HttpHeader.CONTENT_TYPE_HEADER, "application/json");
-    HttpHeaders httpHeaders = new ResteasyHttpHeaders(headers);
+    Map<String, String> headers = new HashMap<>();
+    headers.put(HttpHeader.CONTENT_TYPE_HEADER, "application/json");
 
-    HttpRequest httpRequest = Mockito.mock(HttpRequest.class);
-    Mockito.doReturn(httpHeaders).when(httpRequest).getHttpHeaders();
+    HttpServletRequest servletRequest = Mockito.mock(HttpServletRequest.class);
+    Mockito.doReturn(Collections.enumeration(headers.keySet())).when(servletRequest).getHeaderNames();
+    Mockito.doReturn(headers.get(HttpHeader.CONTENT_TYPE_HEADER).toUpperCase(Locale.ROOT))
+           .when(servletRequest)
+           .getHeader(HttpHeader.CONTENT_TYPE_HEADER);
 
-    Map<String, String> headersMap = getScimEndpoint().getHttpHeaders(httpRequest);
-    Assertions.assertEquals(1, headersMap.size());
-    Assertions.assertEquals(HttpHeader.SCIM_CONTENT_TYPE, headersMap.get(HttpHeader.CONTENT_TYPE_HEADER));
+    Map<String, String> httpHeaders = getScimEndpoint().getHttpHeaders(servletRequest);
+    Assertions.assertEquals(1, httpHeaders.size());
+    Assertions.assertEquals(HttpHeader.SCIM_CONTENT_TYPE, httpHeaders.get(HttpHeader.CONTENT_TYPE_HEADER));
   }
 }
