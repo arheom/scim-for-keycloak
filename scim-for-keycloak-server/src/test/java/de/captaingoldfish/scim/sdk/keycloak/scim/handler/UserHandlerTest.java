@@ -7,7 +7,6 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 
 import org.hamcrest.MatcherAssert;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.events.admin.OperationType;
+import org.keycloak.models.GroupModel;
 import org.keycloak.models.UserCredentialManager;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
@@ -36,6 +36,7 @@ import de.captaingoldfish.scim.sdk.common.resources.complex.Name;
 import de.captaingoldfish.scim.sdk.common.resources.multicomplex.Address;
 import de.captaingoldfish.scim.sdk.common.resources.multicomplex.Email;
 import de.captaingoldfish.scim.sdk.common.resources.multicomplex.Entitlement;
+import de.captaingoldfish.scim.sdk.common.resources.multicomplex.GroupNode;
 import de.captaingoldfish.scim.sdk.common.resources.multicomplex.Ims;
 import de.captaingoldfish.scim.sdk.common.resources.multicomplex.MultiComplexNode;
 import de.captaingoldfish.scim.sdk.common.resources.multicomplex.PhoneNumber;
@@ -45,7 +46,7 @@ import de.captaingoldfish.scim.sdk.common.response.ListResponse;
 import de.captaingoldfish.scim.sdk.common.utils.JsonHelper;
 import de.captaingoldfish.scim.sdk.keycloak.scim.AbstractScimEndpointTest;
 import de.captaingoldfish.scim.sdk.keycloak.scim.ScimConfigurationBridge;
-import de.captaingoldfish.scim.sdk.keycloak.setup.RequestBuilder;
+import de.captaingoldfish.scim.sdk.keycloak.setup.RequestMock;
 import de.captaingoldfish.scim.sdk.server.endpoints.ResourceEndpoint;
 import de.captaingoldfish.scim.sdk.server.schemas.ResourceType;
 import lombok.extern.slf4j.Slf4j;
@@ -87,12 +88,10 @@ public class UserHandlerTest extends AbstractScimEndpointTest
     PatchRequestOperation operation = PatchRequestOperation.builder().op(PatchOp.REPLACE).valueNode(user).build();
     PatchOpRequest patchOpRequest = PatchOpRequest.builder().operations(Collections.singletonList(operation)).build();
 
-    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                               .method(HttpMethod.PATCH)
-                                               .endpoint(EndpointPaths.USERS + "/" + superMario.getId())
-                                               .requestBody(patchOpRequest.toString())
-                                               .build();
-    Response response = getScimEndpoint().handleScimRequest(request);
+    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+               .method(HttpMethod.PATCH)
+               .endpoint(EndpointPaths.USERS + "/" + superMario.getId());
+    Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
     Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
     // validate
@@ -143,11 +142,10 @@ public class UserHandlerTest extends AbstractScimEndpointTest
     serviceProvider.setChangePasswordConfig(ChangePasswordConfig.builder().supported(true).build());
 
     UserModel superMario = getKeycloakSession().users().addUser(getRealmModel(), "SuperMario");
-    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                               .method(HttpMethod.DELETE)
-                                               .endpoint(EndpointPaths.USERS + "/" + superMario.getId())
-                                               .build();
-    Response response = getScimEndpoint().handleScimRequest(request);
+    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+               .method(HttpMethod.DELETE)
+               .endpoint(EndpointPaths.USERS + "/" + superMario.getId());
+    Response response = getScimEndpoint().handleScimRequest(null);
     Assertions.assertEquals(HttpStatus.NO_CONTENT, response.getStatus());
 
     // validate
@@ -251,12 +249,10 @@ public class UserHandlerTest extends AbstractScimEndpointTest
                                                   .build())
                     .build();
 
-    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                               .method(HttpMethod.POST)
-                                               .endpoint(EndpointPaths.USERS)
-                                               .requestBody(user.toString())
-                                               .build();
-    Response response = getScimEndpoint().handleScimRequest(request);
+    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+               .method(HttpMethod.POST)
+               .endpoint(EndpointPaths.USERS);
+    Response response = getScimEndpoint().handleScimRequest(user.toString());
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
 
     UserCredentialManager credentialManager = getKeycloakSession().userCredentialManager();
@@ -371,12 +367,10 @@ public class UserHandlerTest extends AbstractScimEndpointTest
     userResourceType.getFeatures().getAuthorization().setAuthenticated(false);
 
     User user = User.builder().userName("goldfish").build();
-    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                               .method(HttpMethod.POST)
-                                               .endpoint(EndpointPaths.USERS)
-                                               .requestBody(user.toString())
-                                               .build();
-    Response response = getScimEndpoint().handleScimRequest(request);
+    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+               .method(HttpMethod.POST)
+               .endpoint(EndpointPaths.USERS);
+    Response response = getScimEndpoint().handleScimRequest(user.toString());
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
 
     User createdUser = JsonHelper.readJsonDocument((String)response.getEntity(), User.class);
@@ -414,11 +408,10 @@ public class UserHandlerTest extends AbstractScimEndpointTest
     getKeycloakSession().users().addUser(getRealmModel(), "mario");
     goldfish.setCreatedTimestamp(null);
 
-    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                               .method(HttpMethod.GET)
-                                               .endpoint(EndpointPaths.USERS)
-                                               .build();
-    Response response = getScimEndpoint().handleScimRequest(request);
+    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+               .method(HttpMethod.GET)
+               .endpoint(EndpointPaths.USERS);
+    Response response = getScimEndpoint().handleScimRequest(null);
     Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
     ListResponse listResponse = JsonHelper.readJsonDocument((String)response.getEntity(), ListResponse.class);
@@ -426,5 +419,41 @@ public class UserHandlerTest extends AbstractScimEndpointTest
     Assertions.assertEquals(3, listResponse.getTotalResults());
     goldfish = getKeycloakSession().users().getUserById(getRealmModel(), goldfish.getId());
     Assertions.assertNull(goldfish.getCreatedTimestamp());
+  }
+
+  /**
+   * verifies that the associated groups are returned if a user is accessed
+   */
+  @Test
+  public void testReturnUserWithGroups()
+  {
+    UserModel superMario = getKeycloakSession().users().addUser(getRealmModel(), "supermario");
+
+    GroupModel nintendo = getKeycloakSession().groups().createGroup(getRealmModel(), "nintendo");
+    GroupModel marioClub = getKeycloakSession().groups().createGroup(getRealmModel(), "mario club");
+
+    superMario.joinGroup(nintendo);
+    superMario.joinGroup(marioClub);
+
+    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+               .method(HttpMethod.GET)
+               .endpoint(String.format("%s/%s", EndpointPaths.USERS, superMario.getId()));
+    Response response = getScimEndpoint().handleScimRequest(null);
+    Assertions.assertEquals(HttpStatus.OK, response.getStatus());
+
+    User user = JsonHelper.readJsonDocument((String)response.getEntity(), User.class);
+    Assertions.assertEquals(2, user.getGroups().size());
+    GroupNode nintendoNode = user.getGroups()
+                                 .stream()
+                                 .filter(g -> g.getDisplay().get().equals(nintendo.getName()))
+                                 .findAny()
+                                 .get();
+    Assertions.assertEquals("direct", nintendoNode.getType().get());
+    GroupNode marioClubNode = user.getGroups()
+                                  .stream()
+                                  .filter(g -> g.getDisplay().get().equals(marioClub.getName()))
+                                  .findAny()
+                                  .get();
+    Assertions.assertEquals("direct", marioClubNode.getType().get());
   }
 }
