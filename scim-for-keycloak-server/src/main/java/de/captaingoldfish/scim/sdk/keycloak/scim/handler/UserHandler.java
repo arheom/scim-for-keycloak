@@ -74,6 +74,8 @@ public class UserHandler extends ResourceHandler<User>
   @Override
   public User createResource(User user, Context context)
   {
+    log.warn("createResource");
+    log.warn(user.toPrettyString());
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     final String username = user.getUserName().get();
     if (keycloakSession.users().getUserByUsername(keycloakSession.getContext().getRealm(), username) != null)
@@ -146,6 +148,8 @@ public class UserHandler extends ResourceHandler<User>
   @Override
   public User updateResource(User userToUpdate, Context context)
   {
+    log.warn("updateResource");
+    log.warn(userToUpdate.toPrettyString());
     final String internalId = SyncUtils.getInternalId(userToUpdate.getId().get());
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), internalId);
@@ -178,6 +182,7 @@ public class UserHandler extends ResourceHandler<User>
   @Override
   public void deleteResource(String id, Context context)
   {
+    log.warn("deleteResource: " + id);
     final String internalId = SyncUtils.getInternalId(id);
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), internalId);

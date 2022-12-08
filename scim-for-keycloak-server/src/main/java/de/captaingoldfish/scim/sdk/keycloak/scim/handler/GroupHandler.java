@@ -51,6 +51,8 @@ public class GroupHandler extends ResourceHandler<Group>
   @Override
   public Group createResource(Group group, Context context)
   {
+    log.warn("createResource");
+    log.warn(group.toPrettyString());
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     final String groupName = group.getDisplayName().get();
     if (new GroupService(keycloakSession).getGroupByName(groupName).isPresent())
@@ -126,6 +128,8 @@ public class GroupHandler extends ResourceHandler<Group>
   @Override
   public Group updateResource(Group groupToUpdate, Context context)
   {
+    log.warn("updateResource");
+    log.warn(groupToUpdate.toPrettyString());
     final String internalId = SyncUtils.getInternalId(groupToUpdate.getId().get());
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     GroupModel groupModel = keycloakSession.getContext().getRealm().getGroupById(internalId);
@@ -156,6 +160,7 @@ public class GroupHandler extends ResourceHandler<Group>
   @Override
   public void deleteResource(String id, Context context)
   {
+    log.warn("deleteResource: " + id);
     final String internalId = SyncUtils.getInternalId(id);
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     GroupModel groupModel = keycloakSession.getContext().getRealm().getGroupById(internalId);

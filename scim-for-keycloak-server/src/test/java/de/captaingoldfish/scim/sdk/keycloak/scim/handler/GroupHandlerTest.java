@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.Assertions;
@@ -34,7 +35,7 @@ import de.captaingoldfish.scim.sdk.common.resources.multicomplex.Member;
 import de.captaingoldfish.scim.sdk.common.response.ErrorResponse;
 import de.captaingoldfish.scim.sdk.common.utils.JsonHelper;
 import de.captaingoldfish.scim.sdk.keycloak.scim.AbstractScimEndpointTest;
-import de.captaingoldfish.scim.sdk.keycloak.setup.RequestMock;
+import de.captaingoldfish.scim.sdk.keycloak.setup.RequestBuilder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -65,10 +66,10 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
 
     {
-      Member memberMario = Member.builder().value("u-" + superMario.getId()).type("User").build();
-      Member memberBowser = Member.builder().value("u-" + bowser.getId()).type("User").build();
-      Member memberRetroStudios = Member.builder().value("g-" + retroStudios.getId()).type("Group").build();
-      Member memberMarioClub = Member.builder().value("g-" + marioClub.getId()).type("Group").build();
+      Member memberMario = Member.builder().value(SyncUtils.USER_PREFIX + superMario.getId()).type("User").build();
+      Member memberBowser = Member.builder().value(SyncUtils.USER_PREFIX + bowser.getId()).type("User").build();
+      Member memberRetroStudios = Member.builder().value(SyncUtils.GROUP_PREFIX + retroStudios.getId()).type("Group").build();
+      Member memberMarioClub = Member.builder().value(SyncUtils.GROUP_PREFIX + marioClub.getId()).type("Group").build();
 
       PatchOpRequest patchOpRequest = new PatchOpRequest();
       List<PatchRequestOperation> operations = new ArrayList<>();
@@ -95,12 +96,12 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       patchOpRequest.setOperations(operations);
 
       HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                                 .endpoint(EndpointPaths.GROUPS + "/g-" + nintendo.getId())
+                                                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX + nintendo.getId())
                                                  .method(HttpMethod.PATCH)
                                                  .requestBody(patchOpRequest.toString())
                                                  .build();
 
-      Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
+      Response response = getScimEndpoint().handleScimRequest(request);
       Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
       Assertions.assertTrue(superMario.isMemberOf(nintendo));
@@ -123,20 +124,20 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
       operations.add(PatchRequestOperation.builder()
                                           .op(PatchOp.REMOVE)
-                                          .path("members[value eq \"u-" + bowser.getId() + "\"]")
+                                          .path("members[value eq \"" + SyncUtils.USER_PREFIX + bowser.getId() + "\"]")
                                           .build());
       operations.add(PatchRequestOperation.builder()
                                           .op(PatchOp.REMOVE)
-                                          .path("members[value eq \"g-" + marioClub.getId() + "\"]")
+                                          .path("members[value eq \"" + SyncUtils.GROUP_PREFIX + marioClub.getId() + "\"]")
                                           .build());
       patchOpRequest.setOperations(operations);
       HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                                 .endpoint(EndpointPaths.GROUPS + "/g-" + nintendo.getId())
+                                                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX + nintendo.getId())
                                                  .method(HttpMethod.PATCH)
                                                  .requestBody(patchOpRequest.toString())
                                                  .build();
 
-      Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
+      Response response = getScimEndpoint().handleScimRequest(request);
       Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
       Assertions.assertTrue(superMario.isMemberOf(nintendo), "super mario must still be a member of group nintendo");
@@ -167,13 +168,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     Group nintendo = Group.builder()
                           .displayName("nintendo")
                           .members(Arrays.asList(Member.builder()
-                                                       .value(superMario.getId())
+                                                       .value(SyncUtils.USER_PREFIX + superMario.getId())
                                                        .ref(String.format("http://localhost/scim/v2%s/%s",
                                                                           EndpointPaths.USERS,
                                                                           superMario.getId()))
                                                        .build(),
                                                  Member.builder()
-                                                       .value(retroStudios.getId())
+                                                       .value(SyncUtils.GROUP_PREFIX + retroStudios.getId())
                                                        .ref(String.format("http://localhost/scim/v2%s/%s",
                                                                           EndpointPaths.GROUPS,
                                                                           retroStudios.getId()))
@@ -182,11 +183,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
     Assertions.assertTrue(nintendo.getMembers().stream().anyMatch(member -> !member.getType().isPresent()));
 
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(nintendo.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendo.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
 
     Group createdGroup = JsonHelper.readJsonDocument((String)response.getEntity(), Group.class);
@@ -209,11 +212,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     // members
     Group nintendo = Group.builder().displayName("nintendo").build();
 
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(nintendo.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendo.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
 
     Group createdGroup = JsonHelper.readJsonDocument((String)response.getEntity(), Group.class);
@@ -225,11 +230,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
 
     Group groupToUpdate = Group.builder().displayName("newCompanyName").build();
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(String.format("%s/%s", EndpointPaths.GROUPS, createdGroup.getId().get()))
-               .method(HttpMethod.PUT);
+    request = RequestBuilder.builder(getScimEndpoint())
+                            .endpoint(String.format("%s/%s", EndpointPaths.GROUPS, createdGroup.getId().get()))
+                            .method(HttpMethod.PUT)
+                            .requestBody(groupToUpdate.toString())
+                            .build();
     Thread.sleep(1);
-    Response updateResponse = getScimEndpoint().handleScimRequest(groupToUpdate.toString());
+    Response updateResponse = getScimEndpoint().handleScimRequest(request);
     Group updatedGroup = JsonHelper.readJsonDocument((String)updateResponse.getEntity(), Group.class);
     Assertions.assertEquals(created, groupModel.getFirstAttribute(AttributeNames.RFC7643.CREATED));
     Assertions.assertNotEquals(created, groupModel.getFirstAttribute(AttributeNames.RFC7643.LAST_MODIFIED));
@@ -249,27 +256,23 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
   @ValueSource(strings = {"User", "Group"})
   public void testCreateGroupWithNonExistingMember(String type)
   {
-    String prefix = "u-";
-    if ("Group".equals(type))
-    {
-      prefix = "g-";
-    }
     final String notExistingId = UUID.randomUUID().toString();
     Group nintendo = Group.builder()
                           .displayName("nintendo")
-                          .members(Arrays.asList(Member.builder().value(prefix + notExistingId).type(type).build()))
+                          .members(Arrays.asList(Member.builder().value((type.equals("User") ?SyncUtils.USER_PREFIX : SyncUtils.GROUP_PREFIX) + notExistingId).type(type).build()))
                           .build();
 
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(nintendo.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendo.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.NOT_FOUND, response.getStatus());
     log.warn((String)response.getEntity());
     ErrorResponse errorResponse = JsonHelper.readJsonDocument((String)response.getEntity(), ErrorResponse.class);
-    Assertions.assertEquals(String.format("%s with id '%s' does not exist", type, notExistingId),
-                            errorResponse.getDetail().get());
+    Assertions.assertTrue(String.format("%s with id '%s' does not exist", type, notExistingId).equals(errorResponse.getDetail().get()));
   }
 
   /**
@@ -285,11 +288,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     getKeycloakSession().groups().createGroup(getRealmModel(), prefixName + "Remove");
 
     Group nintendo = Group.builder().displayName(prefixName).build();
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(nintendo.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendo.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
   }
 
@@ -305,11 +310,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     GroupModel groupBremen = getKeycloakSession().groups().createGroup(getRealmModel(), "groupBremen");
 
     Group nintendo = Group.builder().displayName(groupBremen.getName()).build();
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(nintendo.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendo.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.CONFLICT, response.getStatus());
   }
 
@@ -320,11 +327,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
   public void testAdminEventOnGroupCreated()
   {
     Group goldfish = Group.builder().displayName("goldfish").build();
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(goldfish.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(goldfish.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
 
     Group createdGroup = JsonHelper.readJsonDocument((String)response.getEntity(), Group.class);
@@ -364,27 +373,29 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
     List<Member> groupMembers = Arrays.asList(Member.builder()
                                                     .type(ResourceTypeNames.USER)
-                                                    .value(superMario.getId())
+                                                    .value(SyncUtils.USER_PREFIX + superMario.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.USER)
-                                                    .value(bowser.getId())
+                                                    .value(SyncUtils.USER_PREFIX + bowser.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.GROUPS)
-                                                    .value(marioClub.getId())
+                                                    .value(SyncUtils.GROUP_PREFIX + marioClub.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.GROUPS)
-                                                    .value(luigiClub.getId())
+                                                    .value(SyncUtils.GROUP_PREFIX + luigiClub.getId())
                                                     .build());
 
     Group nintendo = Group.builder().displayName("nintendo").members(groupMembers).build();
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS)
-               .method(HttpMethod.POST);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS)
+                                               .method(HttpMethod.POST)
+                                               .requestBody(nintendo.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendo.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.CREATED, response.getStatus());
 
     Group createdGroup = JsonHelper.readJsonDocument((String)response.getEntity(), Group.class);
@@ -427,8 +438,8 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       AdminEvent adminEvent = adminEventList.stream()
                                             .filter(event -> event.getResourcePath()
                                                                   .equals(String.format("users/%s/groups/%s",
-                                                                                        superMario.getId(),
-                                                                                        nintendoGroupModel.getId())))
+                                                                          superMario.getId(),
+                                                                          nintendoGroupModel.getId())))
                                             .findAny()
                                             .get();
       Assertions.assertEquals(getTestClient().getId(), adminEvent.getAuthDetails().getClientId());
@@ -531,11 +542,12 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
   {
     GroupModel nintendo = getKeycloakSession().groups().createGroup(getRealmModel(), "nintendo");
 
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
-               .method(HttpMethod.DELETE);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
+                                               .method(HttpMethod.DELETE)
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(null);
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.NO_CONTENT, response.getStatus());
 
     // check for created admin event
@@ -576,19 +588,21 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
     List<Member> groupMembers = Arrays.asList(Member.builder()
                                                     .type(ResourceTypeNames.USER)
-                                                    .value(superMario.getId())
+                                                    .value(SyncUtils.USER_PREFIX + superMario.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.GROUPS)
-                                                    .value(marioClub.getId())
+                                                    .value(SyncUtils.GROUP_PREFIX + marioClub.getId())
                                                     .build());
 
     Group nintendoGroup = Group.builder().displayName("nintendo").members(groupMembers).build();
-    RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-               .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
-               .method(HttpMethod.PUT);
+    HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
+                                               .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
+                                               .method(HttpMethod.PUT)
+                                               .requestBody(nintendoGroup.toString())
+                                               .build();
 
-    Response response = getScimEndpoint().handleScimRequest(nintendoGroup.toString());
+    Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.OK, response.getStatus());
 
     Group updatedGroup = JsonHelper.readJsonDocument((String)response.getEntity(), Group.class);
@@ -623,8 +637,8 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       AdminEvent adminEvent = adminEventList.stream()
                                             .filter(event -> event.getResourcePath()
                                                                   .equals(String.format("users/%s/groups/%s",
-                                                                                        bowser.getId(),
-                                                                                        nintendo.getId())))
+                                                                          bowser.getId(),
+                                                                          nintendo.getId())))
                                             .findAny()
                                             .get();
       Assertions.assertEquals(getTestClient().getId(), adminEvent.getAuthDetails().getClientId());

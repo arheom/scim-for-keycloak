@@ -114,7 +114,7 @@ public class UserHandlerTest extends AbstractScimEndpointTest
       AdminEvent adminEvent = adminEventList.get(0);
       Assertions.assertEquals(getTestClient().getId(), adminEvent.getAuthDetails().getClientId());
       Assertions.assertEquals(getTestUser().getId(), adminEvent.getAuthDetails().getUserId());
-      Assertions.assertEquals("users/" + updateddUser.getId().get(), adminEvent.getResourcePath());
+      Assertions.assertEquals("users/" + SyncUtils.getInternalId(updateddUser.getId().get()), adminEvent.getResourcePath());
       Assertions.assertEquals(OperationType.UPDATE, adminEvent.getOperationType());
       Assertions.assertEquals(org.keycloak.events.admin.ResourceType.USER, adminEvent.getResourceType());
       // equalize the two objects by modifying the meta-attribute. The meta-attribute is not identical because the
@@ -320,7 +320,7 @@ public class UserHandlerTest extends AbstractScimEndpointTest
 
     // check primary email and password
     {
-      UserModel userModel = getKeycloakSession().users().getUserById(getRealmModel(), userId);
+      UserModel userModel = getKeycloakSession().users().getUserById(getRealmModel(), SyncUtils.getInternalId(userId));
       Assertions.assertNotNull(userModel);
       Assertions.assertEquals(user.getEmails()
                                   .stream()
@@ -346,7 +346,7 @@ public class UserHandlerTest extends AbstractScimEndpointTest
       AdminEvent adminEvent = adminEventList.get(0);
       Assertions.assertEquals(getTestClient().getId(), adminEvent.getAuthDetails().getClientId());
       Assertions.assertEquals(getTestUser().getId(), adminEvent.getAuthDetails().getUserId());
-      Assertions.assertEquals("users/" + createdUser.getId().get(), adminEvent.getResourcePath());
+      Assertions.assertEquals("users/" + SyncUtils.getInternalId(createdUser.getId().get()), adminEvent.getResourcePath());
       Assertions.assertEquals(OperationType.CREATE, adminEvent.getOperationType());
       Assertions.assertEquals(org.keycloak.events.admin.ResourceType.USER, adminEvent.getResourceType());
       // equalize the two objects by modifying the meta-attribute. The meta-attribute is not identical because the
@@ -393,7 +393,7 @@ public class UserHandlerTest extends AbstractScimEndpointTest
       Assertions.assertNotEquals(getTestUser().getId(), adminEvent.getAuthDetails().getUserId());
       Assertions.assertEquals("anonymous", adminEvent.getAuthDetails().getClientId());
       Assertions.assertEquals("anonymous", adminEvent.getAuthDetails().getUserId());
-      Assertions.assertEquals("users/" + createdUser.getId().get(), adminEvent.getResourcePath());
+      Assertions.assertEquals("users/" + SyncUtils.getInternalId(createdUser.getId().get()), adminEvent.getResourcePath());
       Assertions.assertEquals(OperationType.CREATE, adminEvent.getOperationType());
       Assertions.assertEquals(org.keycloak.events.admin.ResourceType.USER, adminEvent.getResourceType());
       // equalize the two objects by modifying the meta-attribute. The meta-attribute is not identical because the
@@ -448,7 +448,7 @@ public class UserHandlerTest extends AbstractScimEndpointTest
                                                .method(HttpMethod.GET)
                                                .endpoint(String.format("%s/%s",
                                                                        EndpointPaths.USERS,
-                                                                       superMario.getId()))
+                                                                       SyncUtils.getPublicId(superMario.getId(), false)))
                                                .build();
     Response response = getScimEndpoint().handleScimRequest(request);
     Assertions.assertEquals(HttpStatus.OK, response.getStatus());

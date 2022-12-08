@@ -3,9 +3,9 @@ package de.captaingoldfish.scim.sdk.keycloak.scim.handler;
 public class SyncUtils
 {
 
-  private static final String USER_PREFIX = "u-";
+  public static final String USER_PREFIX = "u-";
 
-  private static final String GROUP_PREFIX = "g-";
+  public static final String GROUP_PREFIX = "g-";
 
   public static String getPublicId(String internalId, boolean isGroup)
   {
