@@ -68,7 +68,10 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     {
       Member memberMario = Member.builder().value(SyncUtils.USER_PREFIX + superMario.getId()).type("User").build();
       Member memberBowser = Member.builder().value(SyncUtils.USER_PREFIX + bowser.getId()).type("User").build();
-      Member memberRetroStudios = Member.builder().value(SyncUtils.GROUP_PREFIX + retroStudios.getId()).type("Group").build();
+      Member memberRetroStudios = Member.builder()
+                                        .value(SyncUtils.GROUP_PREFIX + retroStudios.getId())
+                                        .type("Group")
+                                        .build();
       Member memberMarioClub = Member.builder().value(SyncUtils.GROUP_PREFIX + marioClub.getId()).type("Group").build();
 
       PatchOpRequest patchOpRequest = new PatchOpRequest();
@@ -96,7 +99,8 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       patchOpRequest.setOperations(operations);
 
       HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX + nintendo.getId())
+                                                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX
+                                                           + nintendo.getId())
                                                  .method(HttpMethod.PATCH)
                                                  .requestBody(patchOpRequest.toString())
                                                  .build();
@@ -128,11 +132,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
                                           .build());
       operations.add(PatchRequestOperation.builder()
                                           .op(PatchOp.REMOVE)
-                                          .path("members[value eq \"" + SyncUtils.GROUP_PREFIX + marioClub.getId() + "\"]")
+                                          .path("members[value eq \"" + SyncUtils.GROUP_PREFIX + marioClub.getId()
+                                                + "\"]")
                                           .build());
       patchOpRequest.setOperations(operations);
       HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
-                                                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX + nintendo.getId())
+                                                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX
+                                                           + nintendo.getId())
                                                  .method(HttpMethod.PATCH)
                                                  .requestBody(patchOpRequest.toString())
                                                  .build();
@@ -259,7 +265,11 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     final String notExistingId = UUID.randomUUID().toString();
     Group nintendo = Group.builder()
                           .displayName("nintendo")
-                          .members(Arrays.asList(Member.builder().value((type.equals("User") ?SyncUtils.USER_PREFIX : SyncUtils.GROUP_PREFIX) + notExistingId).type(type).build()))
+                          .members(Arrays.asList(Member.builder()
+                                                       .value((type.equals("User") ? SyncUtils.USER_PREFIX
+                                                         : SyncUtils.GROUP_PREFIX) + notExistingId)
+                                                       .type(type)
+                                                       .build()))
                           .build();
 
     HttpServletRequest request = RequestBuilder.builder(getScimEndpoint())
@@ -272,7 +282,8 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     Assertions.assertEquals(HttpStatus.NOT_FOUND, response.getStatus());
     log.warn((String)response.getEntity());
     ErrorResponse errorResponse = JsonHelper.readJsonDocument((String)response.getEntity(), ErrorResponse.class);
-    Assertions.assertTrue(String.format("%s with id '%s' does not exist", type, notExistingId).equals(errorResponse.getDetail().get()));
+    Assertions.assertTrue(String.format("%s with id '%s' does not exist", type, notExistingId)
+                                .equals(errorResponse.getDetail().get()));
   }
 
   /**
@@ -438,8 +449,8 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       AdminEvent adminEvent = adminEventList.stream()
                                             .filter(event -> event.getResourcePath()
                                                                   .equals(String.format("users/%s/groups/%s",
-                                                                          superMario.getId(),
-                                                                          nintendoGroupModel.getId())))
+                                                                                        superMario.getId(),
+                                                                                        nintendoGroupModel.getId())))
                                             .findAny()
                                             .get();
       Assertions.assertEquals(getTestClient().getId(), adminEvent.getAuthDetails().getClientId());
@@ -637,8 +648,8 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       AdminEvent adminEvent = adminEventList.stream()
                                             .filter(event -> event.getResourcePath()
                                                                   .equals(String.format("users/%s/groups/%s",
-                                                                          bowser.getId(),
-                                                                          nintendo.getId())))
+                                                                                        bowser.getId(),
+                                                                                        nintendo.getId())))
                                             .findAny()
                                             .get();
       Assertions.assertEquals(getTestClient().getId(), adminEvent.getAuthDetails().getClientId());
