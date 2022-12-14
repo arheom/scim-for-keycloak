@@ -333,10 +333,7 @@ public class GroupHandler extends ResourceHandler<Group>
       if (newMember == null)
       {
         throw new ResourceNotFoundException(String.format("User with id '%s' does not exist", newUserMemberId));
-      }
-      else
-      {
-        newMember.joinGroup(groupModel);
+
       }
       newMember.joinGroup(groupModel);
       adminEventAuditer.createEvent(OperationType.CREATE,

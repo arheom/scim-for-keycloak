@@ -7,7 +7,6 @@ import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.services.resource.RealmResourceProviderFactory;
 
 import de.captaingoldfish.scim.sdk.keycloak.constants.ContextPaths;
-import lombok.extern.slf4j.Slf4j;
 
 
 /**
@@ -16,9 +15,8 @@ import lombok.extern.slf4j.Slf4j;
  * <br>
  * this class will setup the scim resource provider as a rest provider in the keycloak server
  *
- * @see META-INF/services/org.keycloak.services.resource.RealmResourceProviderFactory
+ * @see /META-INF/services/org.keycloak.services.resource.RealmResourceProviderFactory
  */
-@Slf4j
 public class ScimEndpointProviderFactory implements RealmResourceProviderFactory
 {
 

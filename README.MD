@@ -13,20 +13,20 @@ If you like this work and want to support me you'll be able to treat me to a cup
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=LLRM6ZVL4G9PJ)
 
 <!-- TOC -->
-- [What is SCIM-for-keycloak?](#what-is-scim-for-keycloak)
-  - [Keycloak support matrix](#keycloak-support-matrix)
-  - [Versioning](#versioning)
-  - [Releases](#releases)
-  - [Release Notes](#release-notes)
-  - [How to build](#how-to-build)
-  - [Deploy into a standalone keycloak server](#deploy-into-a-standalone-keycloak-server)
-  - [Security Considerations](#security-considerations)
-  - [How to configure the SCIM endpoints](#how-to-configure-the-scim-endpoints)
-  - [Disabled by default](#disabled-by-default)
-  - [What is configurable?](#what-is-configurable)
-  - [Admin-Events (kc-13-b3, kc-14-b2+)](#admin-events-kc-13-b3-kc-14-b2)
-  - [Disadvantages](#disadvantages)
-  - [Grant management-access for configuration](#grant-management-access-for-configuration)
+* [What is SCIM-for-keycloak?](#what-is-scim-for-keycloak)
+  * [Keycloak support matrix](#keycloak-support-matrix)
+  * [Versioning](#versioning)
+  * [Releases](#releases)
+  * [Release Notes](#release-notes)
+  * [How to build](#how-to-build)
+  * [Deploy into keycloak server](#deploy-into-keycloak-server)
+  * [Security Considerations](#security-considerations)
+  * [How to configure the SCIM endpoints](#how-to-configure-the-scim-endpoints)
+  * [Disabled by default](#disabled-by-default)
+  * [What is configurable?](#what-is-configurable)
+  * [Admin-Events (kc-13-b3, kc-14-b2+)](#admin-events--kc-13-b3-kc-14-b2-)
+  * [Disadvantages](#disadvantages)
+  * [Grant management-access for configuration](#grant-management-access-for-configuration)
 <!-- TOC -->
 
 # What is SCIM-for-keycloak?
@@ -107,10 +107,10 @@ Checkout the git tag that you want to build:
 4. find the scim-for-keycloak artifact in:
    `scim-for-keycloak/scim-for-keycloak-server/target/scim-for-keycloak-kc-${keycloak.version}-b${project.incremental.version}.jar`
 
-## Deploy into a standalone keycloak server
+## Deploy into keycloak server
 
-Copy the built artifact into the directory `${keycloak.home}/standalone/deployments` of a keycloak server.  
-**NOTE:** *If the server is running during deployment you need to restart it!*
+Add the artifact to the keycloak providers directory `${keycloak.home}/providers` and execute in
+`${keycloak.home}/bin` the command `kc.sh build` to install the provider
 
 ## Security Considerations
 
@@ -222,3 +222,4 @@ So in total we got 2 different cases:
 ![theme-settings](images/scim-access-from-master-realm-to-master.png)  
 ![theme-settings](images/scim-access-for-realm-test.png)  
 ![theme-settings](images/scim-access-from-test-realm-to-test.png)  
+
