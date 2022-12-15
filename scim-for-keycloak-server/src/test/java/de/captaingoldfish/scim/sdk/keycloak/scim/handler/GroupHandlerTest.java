@@ -65,13 +65,10 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
 
     {
-      Member memberMario = Member.builder().value(SyncUtils.USER_PREFIX + superMario.getId()).type("User").build();
-      Member memberBowser = Member.builder().value(SyncUtils.USER_PREFIX + bowser.getId()).type("User").build();
-      Member memberRetroStudios = Member.builder()
-                                        .value(SyncUtils.GROUP_PREFIX + retroStudios.getId())
-                                        .type("Group")
-                                        .build();
-      Member memberMarioClub = Member.builder().value(SyncUtils.GROUP_PREFIX + marioClub.getId()).type("Group").build();
+      Member memberMario = Member.builder().value(superMario.getId()).type("User").build();
+      Member memberBowser = Member.builder().value(bowser.getId()).type("User").build();
+      Member memberRetroStudios = Member.builder().value(retroStudios.getId()).type("Group").build();
+      Member memberMarioClub = Member.builder().value(marioClub.getId()).type("Group").build();
 
       PatchOpRequest patchOpRequest = new PatchOpRequest();
       List<PatchRequestOperation> operations = new ArrayList<>();
@@ -98,7 +95,7 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
       patchOpRequest.setOperations(operations);
 
       RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX + nintendo.getId())
+                 .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
                  .method(HttpMethod.PATCH);
 
       Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
@@ -124,16 +121,117 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
       operations.add(PatchRequestOperation.builder()
                                           .op(PatchOp.REMOVE)
-                                          .path("members[value eq \"" + SyncUtils.USER_PREFIX + bowser.getId() + "\"]")
+                                          .path("members[value eq \"" + bowser.getId() + "\"]")
                                           .build());
       operations.add(PatchRequestOperation.builder()
                                           .op(PatchOp.REMOVE)
-                                          .path("members[value eq \"" + SyncUtils.GROUP_PREFIX + marioClub.getId()
-                                                + "\"]")
+                                          .path("members[value eq \"" + marioClub.getId() + "\"]")
                                           .build());
       patchOpRequest.setOperations(operations);
       RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
-                 .endpoint(EndpointPaths.GROUPS + "/" + SyncUtils.GROUP_PREFIX + nintendo.getId())
+                 .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
+                 .method(HttpMethod.PATCH);
+
+      Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
+      Assertions.assertEquals(HttpStatus.OK, response.getStatus());
+
+      Assertions.assertTrue(superMario.isMemberOf(nintendo), "super mario must still be a member of group nintendo");
+      Assertions.assertFalse(bowser.isMemberOf(nintendo),
+                             "bowser should have been removed as member of group " + "nintendo");
+      Assertions.assertTrue(nintendo.getSubGroupsStream()
+                                    .map(GroupModel::getName)
+                                    .anyMatch(name -> name.equals(retroStudios.getName())));
+      Assertions.assertFalse(nintendo.getSubGroupsStream()
+                                     .map(GroupModel::getName)
+                                     .anyMatch(name -> name.equals(marioClub.getName())));
+      // check for last modified
+      Assertions.assertNotNull(nintendo.getFirstAttribute(AttributeNames.RFC7643.LAST_MODIFIED));
+    }
+  }
+
+  /**
+   * will verify that a member is being removed from a group if no longer present in the members section
+   *
+   * @see <a href="https://github.com/Captain-P-Goldfish/SCIM-SDK/issues/54">
+   *      https://github.com/Captain-P-Goldfish/SCIM-SDK/issues/54 </a>
+   */
+  @Test
+  public void testMembersAreRemovedFromGroupNoType()
+  {
+    UserModel superMario = getKeycloakSession().users().addUser(getRealmModel(), "supermario");
+    UserModel bowser = getKeycloakSession().users().addUser(getRealmModel(), "bowser");
+
+    GroupModel nintendo = getKeycloakSession().groups().createGroup(getRealmModel(), "nintendo");
+    GroupModel retroStudios = getKeycloakSession().groups().createGroup(getRealmModel(), "retro studios");
+    GroupModel marioClub = getKeycloakSession().groups().createGroup(getRealmModel(), "mario club");
+
+
+    {
+      Member memberMario = Member.builder().value(superMario.getId()).build();
+      Member memberBowser = Member.builder().value(bowser.getId()).build();
+      Member memberRetroStudios = Member.builder().value(retroStudios.getId()).build();
+      Member memberMarioClub = Member.builder().value(marioClub.getId()).build();
+
+      PatchOpRequest patchOpRequest = new PatchOpRequest();
+      List<PatchRequestOperation> operations = new ArrayList<>();
+      operations.add(PatchRequestOperation.builder()
+                                          .op(PatchOp.ADD)
+                                          .path("members")
+                                          .value(memberMario.toString())
+                                          .build());
+      operations.add(PatchRequestOperation.builder()
+                                          .op(PatchOp.ADD)
+                                          .path("members")
+                                          .value(memberBowser.toString())
+                                          .build());
+      operations.add(PatchRequestOperation.builder()
+                                          .op(PatchOp.ADD)
+                                          .path("members")
+                                          .value(memberRetroStudios.toString())
+                                          .build());
+      operations.add(PatchRequestOperation.builder()
+                                          .op(PatchOp.ADD)
+                                          .path("members")
+                                          .value(memberMarioClub.toString())
+                                          .build());
+      patchOpRequest.setOperations(operations);
+
+      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+                 .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
+                 .method(HttpMethod.PATCH);
+
+      Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
+      Assertions.assertEquals(HttpStatus.OK, response.getStatus());
+
+      Assertions.assertTrue(superMario.isMemberOf(nintendo));
+      Assertions.assertTrue(bowser.isMemberOf(nintendo));
+      Assertions.assertEquals(2, nintendo.getSubGroupsStream().count());
+      Assertions.assertTrue(nintendo.getSubGroupsStream()
+                                    .map(GroupModel::getName)
+                                    .anyMatch(name -> name.equals(retroStudios.getName())));
+      Assertions.assertTrue(nintendo.getSubGroupsStream()
+                                    .map(GroupModel::getName)
+                                    .anyMatch(name -> name.equals(marioClub.getName())));
+      // check for last modified
+      Assertions.assertNotNull(nintendo.getFirstAttribute(AttributeNames.RFC7643.LAST_MODIFIED));
+    }
+
+    // now remove bowser and mario club as member from groups
+    {
+      PatchOpRequest patchOpRequest = new PatchOpRequest();
+      List<PatchRequestOperation> operations = new ArrayList<>();
+
+      operations.add(PatchRequestOperation.builder()
+                                          .op(PatchOp.REMOVE)
+                                          .path("members[value eq \"" + bowser.getId() + "\"]")
+                                          .build());
+      operations.add(PatchRequestOperation.builder()
+                                          .op(PatchOp.REMOVE)
+                                          .path("members[value eq \"" + marioClub.getId() + "\"]")
+                                          .build());
+      patchOpRequest.setOperations(operations);
+      RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
+                 .endpoint(EndpointPaths.GROUPS + "/" + nintendo.getId())
                  .method(HttpMethod.PATCH);
 
       Response response = getScimEndpoint().handleScimRequest(patchOpRequest.toString());
@@ -167,13 +265,13 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     Group nintendo = Group.builder()
                           .displayName("nintendo")
                           .members(Arrays.asList(Member.builder()
-                                                       .value(SyncUtils.USER_PREFIX + superMario.getId())
+                                                       .value(superMario.getId())
                                                        .ref(String.format("http://localhost/scim/v2%s/%s",
                                                                           EndpointPaths.USERS,
                                                                           superMario.getId()))
                                                        .build(),
                                                  Member.builder()
-                                                       .value(SyncUtils.GROUP_PREFIX + retroStudios.getId())
+                                                       .value(retroStudios.getId())
                                                        .ref(String.format("http://localhost/scim/v2%s/%s",
                                                                           EndpointPaths.GROUPS,
                                                                           retroStudios.getId()))
@@ -252,11 +350,7 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
     final String notExistingId = UUID.randomUUID().toString();
     Group nintendo = Group.builder()
                           .displayName("nintendo")
-                          .members(Arrays.asList(Member.builder()
-                                                       .value((type.equals("User") ? SyncUtils.USER_PREFIX
-                                                         : SyncUtils.GROUP_PREFIX) + notExistingId)
-                                                       .type(type)
-                                                       .build()))
+                          .members(Arrays.asList(Member.builder().value(notExistingId).type(type).build()))
                           .build();
 
     RequestMock.mockRequest(getScimEndpoint(), getKeycloakSession())
@@ -363,19 +457,19 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
     List<Member> groupMembers = Arrays.asList(Member.builder()
                                                     .type(ResourceTypeNames.USER)
-                                                    .value(SyncUtils.USER_PREFIX + superMario.getId())
+                                                    .value(superMario.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.USER)
-                                                    .value(SyncUtils.USER_PREFIX + bowser.getId())
+                                                    .value(bowser.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.GROUPS)
-                                                    .value(SyncUtils.GROUP_PREFIX + marioClub.getId())
+                                                    .value(marioClub.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.GROUPS)
-                                                    .value(SyncUtils.GROUP_PREFIX + luigiClub.getId())
+                                                    .value(luigiClub.getId())
                                                     .build());
 
     Group nintendo = Group.builder().displayName("nintendo").members(groupMembers).build();
@@ -575,11 +669,11 @@ public class GroupHandlerTest extends AbstractScimEndpointTest
 
     List<Member> groupMembers = Arrays.asList(Member.builder()
                                                     .type(ResourceTypeNames.USER)
-                                                    .value(SyncUtils.USER_PREFIX + superMario.getId())
+                                                    .value(superMario.getId())
                                                     .build(),
                                               Member.builder()
                                                     .type(ResourceTypeNames.GROUPS)
-                                                    .value(SyncUtils.GROUP_PREFIX + marioClub.getId())
+                                                    .value(marioClub.getId())
                                                     .build());
 
     Group nintendoGroup = Group.builder().displayName("nintendo").members(groupMembers).build();

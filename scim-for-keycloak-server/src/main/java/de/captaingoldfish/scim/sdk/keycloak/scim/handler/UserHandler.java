@@ -4,27 +4,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.lang3.StringUtils;
 import org.keycloak.events.admin.OperationType;
 import org.keycloak.events.admin.ResourceType;
-import org.keycloak.models.FederatedIdentityModel;
-import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialManager;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.representations.idm.FederatedIdentityRepresentation;
 
 import de.captaingoldfish.scim.sdk.common.constants.AttributeNames;
 import de.captaingoldfish.scim.sdk.common.constants.enums.SortOrder;
@@ -74,8 +66,6 @@ public class UserHandler extends ResourceHandler<User>
   @Override
   public User createResource(User user, Context context)
   {
-    log.warn("createResource");
-    log.warn(user.toPrettyString());
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
     final String username = user.getUserName().get();
     if (keycloakSession.users().getUserByUsername(keycloakSession.getContext().getRealm(), username) != null)
@@ -96,8 +86,7 @@ public class UserHandler extends ResourceHandler<User>
                                     String.format("users/%s", userModel.getId()),
                                     newUser);
     }
-
-    log.info("Created user with username: {}", userModel.getUsername());
+    log.debug("Created user with username: {}", userModel.getUsername());
     return newUser;
   }
 
@@ -110,9 +99,8 @@ public class UserHandler extends ResourceHandler<User>
                           List<SchemaAttribute> excludedAttributes,
                           Context context)
   {
-    final String internalId = SyncUtils.getInternalId(id);
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
-    UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), internalId);
+    UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), id);
     if (userModel == null)
     {
       return null; // causes a resource not found exception you may also throw it manually
@@ -148,11 +136,10 @@ public class UserHandler extends ResourceHandler<User>
   @Override
   public User updateResource(User userToUpdate, Context context)
   {
-    log.warn("updateResource");
-    log.warn(userToUpdate.toPrettyString());
-    final String internalId = SyncUtils.getInternalId(userToUpdate.getId().get());
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
-    UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), internalId);
+    UserModel userModel = keycloakSession.users()
+                                         .getUserById(keycloakSession.getContext().getRealm(),
+                                                      userToUpdate.getId().get());
     if (userModel == null)
     {
       return null; // causes a resource not found exception you may also throw it manually
@@ -171,8 +158,7 @@ public class UserHandler extends ResourceHandler<User>
                                     String.format("users/%s", userModel.getId()),
                                     user);
     }
-
-    log.info("Updated user with username: {}", userModel.getUsername());
+    log.debug("Updated user with username: {}", userModel.getUsername());
     return user;
   }
 
@@ -182,13 +168,11 @@ public class UserHandler extends ResourceHandler<User>
   @Override
   public void deleteResource(String id, Context context)
   {
-    log.warn("deleteResource: " + id);
-    final String internalId = SyncUtils.getInternalId(id);
     KeycloakSession keycloakSession = ((ScimKeycloakContext)context).getKeycloakSession();
-    UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), internalId);
+    UserModel userModel = keycloakSession.users().getUserById(keycloakSession.getContext().getRealm(), id);
     if (userModel == null)
     {
-      throw new ResourceNotFoundException("resource with id '" + internalId + "' does not exist");
+      throw new ResourceNotFoundException("resource with id '" + id + "' does not exist");
     }
     keycloakSession.users().removeUser(keycloakSession.getContext().getRealm(), userModel);
     {
@@ -198,7 +182,7 @@ public class UserHandler extends ResourceHandler<User>
                                     String.format("users/%s", userModel.getId()),
                                     User.builder().id(userModel.getId()).userName(userModel.getUsername()).build());
     }
-    log.info("Deleted user with username: {}", userModel.getUsername());
+    log.debug("Deleted user with username: {}", userModel.getUsername());
   }
 
   /**
@@ -223,7 +207,7 @@ public class UserHandler extends ResourceHandler<User>
     catch (ModelException ex)
     {
       // this exception is thrown if the password policy was not matched
-      log.info(ex.getMessage(), ex);
+      log.debug(ex.getMessage(), ex);
       throw new BadRequestException("password policy not matched");
     }
   }
@@ -348,7 +332,7 @@ public class UserHandler extends ResourceHandler<User>
     }).collect(Collectors.toList());
 
     User user = User.builder()
-                    .id(SyncUtils.getPublicId(userModel.getId(), false))
+                    .id(userModel.getId())
                     .externalId(userModel.getFirstAttribute(AttributeNames.RFC7643.EXTERNAL_ID))
                     .userName(userModel.getUsername())
                     .name(name)
